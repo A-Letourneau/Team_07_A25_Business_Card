@@ -12,9 +12,9 @@
 #define MOVING_BLOCK 2
 #define START_LAYER 15
 
-#define BUTTON_LEF_PIN 15
-#define BUTTON_MID_PIN 4
-#define BUTTON_RIG_PIN 19
+#define BUTTON_LEF_PIN 23
+#define BUTTON_MID_PIN 19
+#define BUTTON_RIG_PIN 18
 
 #define NB_OF_SIZE_1_BLOCK 1
 #define NB_OF_SIZE_2_BLOCK 7
@@ -61,7 +61,7 @@ void affichage(){
     }
 }
 
-void gameOver(){
+void checkGameOver(){
   for (uint8_t y = 0; y < nbCol; y++)
     if (board[START_LAYER][y] == 1)
       for (uint8_t x = 0; x < nbRow; x++)
@@ -72,8 +72,8 @@ void gameOver(){
 void stopBlock(){
     for (uint8_t x = 0; x < nbRow; x++)
       for (uint8_t y = 0; y < nbCol; y++)
-        if (board[x][y] == 2)
-          board[x][y] = 1;
+        if (board[x][y] == MOVING_BLOCK)
+          board[x][y] = SQUARE;
   }
 
 bool checkMovingBlock(){
@@ -243,6 +243,22 @@ bool checkBlockLorR(char dir){
         }
       }
   }
+  else if (dir == 'R')
+  {
+    if (yBlock + sizeOfBlock >= nbCol)
+    {
+      Serial.println("Cant move, on the right edge");
+      return false;
+    }
+    for(uint8_t x = 0; x < nbRow; x++)
+      {
+        if (board[x][yBlock + sizeOfBlock] == SQUARE && board[x][yBlock] == MOVING_BLOCK)
+        {
+          Serial.println("Cant move, block in the way");
+          return false;
+        }
+      }
+  }
   return true;
 }
 
@@ -259,11 +275,22 @@ void moveBlockLorR(char dir){
         }
     yBlock -= 1;
   }
+  else if (dir == 'R')
+  {
+  for (int x = nbRow; x > -1; x--)
+    for (int y = nbCol; y > -1; y--)
+        if (board[x][y] == MOVING_BLOCK)
+        {
+          board[x][y+1] = MOVING_BLOCK;
+          board[x][y] = EMPTY;  
+        }
+    yBlock += 1;
+  }
 }
 
 void deleteLine(){
   uint8_t nbSquare = 0;
-  for (uint8_t x = 0; x < nbRow; x++)
+  for (int x = nbRow; x > -1 ; x--)
   {
     nbSquare = 0;
     for (uint8_t y = 0; y < nbCol; y++)
@@ -290,7 +317,7 @@ void deleteLine(){
       score += 1; 
       for (uint8_t x2 = x + 1; x2 < nbRow; x2++)
         for (uint8_t y2 = 0; y2 < nbCol; y2++)
-          board[x2 - 1][y2 - 1] = board[x2][y2];
+          board[x2 - 1][y2] = board[x2][y2];
     }
   }
 }
@@ -310,8 +337,8 @@ void setup()
       board[x][y] = 0;
 
   pinMode(BUTTON_LEF_PIN, INPUT);
-  //pinMode(BUTTON_MID_PIN, INPUT);
-  //pinMode(BUTTON_RIG_PIN, INPUT);
+  pinMode(BUTTON_MID_PIN, INPUT);
+  pinMode(BUTTON_RIG_PIN, INPUT);
   
   startTime = millis();
 
@@ -322,6 +349,7 @@ void loop()
   affichage();
 
   deleteLine();
+
   if (!checkMovingBlock())
     createBlock();
 
@@ -330,11 +358,18 @@ void loop()
   else
     stopBlock();
 
-  gameOver();
+  checkGameOver();
 
   while((millis() - startTime) < speed)
-  {
-    if (!digitalRead(BUTTON_LEF_PIN))
+  { 
+    if (!digitalRead(BUTTON_LEF_PIN) && !digitalRead(BUTTON_MID_PIN) && !digitalRead(BUTTON_RIG_PIN))
+    {
+      for (uint8_t x = 0; x < nbRow; x++)
+        for (uint8_t y = 0; y < nbCol; y++)
+          board[x][y] = 0;
+      delay(50);
+    }
+    else if (!digitalRead(BUTTON_LEF_PIN))
     {
       if(checkBlockLorR('L'))
       {      
@@ -342,10 +377,23 @@ void loop()
         affichage(); 
         delay(50);
       }
-
+    }
+    else if (!digitalRead(BUTTON_RIG_PIN))
+    {
+      if(checkBlockLorR('R'))
+      {      
+        moveBlockLorR('R');
+        affichage(); 
+        delay(50);
+      }
+    }
+    else if (!digitalRead(BUTTON_MID_PIN))
+    {
+      delay(5);
+      break;
     }
   }
-  Serial.print("Pos x (rows) : "); Serial.print(xBlock);  Serial.print(" Pos y (col) : "); Serial.println(yBlock);
+  //Serial.print("Pos x (rows) : "); Serial.print(xBlock);  Serial.print(" Pos y (col) : "); Serial.println(yBlock);
   startTime = millis();
 }
 
