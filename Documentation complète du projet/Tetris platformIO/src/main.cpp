@@ -1,3 +1,12 @@
+/*
+Auteur : Alexis Létourneau
+Date : 2026-01-05
+Brief : Tetris sur une matrice de DEL de 9x16
+
+Veuiller importer les 3 librairie avec platform.io
+*/
+
+
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_IS31FL3731.h>
